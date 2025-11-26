@@ -99,8 +99,7 @@ runs:
         else
           echo "exists=false" >> $GITHUB_OUTPUT
         fi
-        
-    
+
     - name: Run CSS class update script
       id: update
       shell: bash
@@ -108,36 +107,32 @@ runs:
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
         
-        # If branch exists check diff against that branch
+        BRANCH="${{ inputs.branch-name }}"
+        
+        # Fetch branch if it exists
         if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
-          echo "🔎 Existing branch found — comparing against it"
-          git fetch origin "${{ inputs.branch-name }}"
-          git checkout "${{ inputs.branch-name }}"
-          BASE_REF="${{ inputs.branch-name }}"
+          echo "🔎 Existing branch found — fetching it"
+          git fetch origin "$BRANCH"
+          BASE_REF="origin/$BRANCH"
         else
           echo "🆕 No branch found — comparing against main"
-          git checkout "${{ github.base_ref || 'main' }}"
-          BASE_REF="main"
+          git fetch origin main
+          BASE_REF="origin/main"
         fi
         
         echo "🔄 Running CSS class update..."
-        echo "Comparing changes relative to: $BASE_REF"
+        node ${{ github.action_path }}/update-classes.js
         
-        if node ${{ github.action_path }}/update-classes.js; then
-          # Detect if any difference REALLY happened
-          if git diff --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "✓ No additional changes, already up-to-date"
-          else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "✓ New changes detected"
-          fi
-        else
+        # Now check if anything actually changed
+        echo "📌 Checking if changes differ from $BASE_REF"
+        if git diff --quiet $BASE_REF -- .; then
           echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "✓ No changes needed"
+          echo "✓ No changes since last PR — skipping"
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "✨ Changes detected"
         fi
 
-    
     - name: Read summary
       id: summary
       if: steps.update.outputs.has_changes == 'true'
