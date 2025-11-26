@@ -33,7 +33,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: your-username/bd-class-check@v1
+      - uses: Kamiikaze/bd-class-check@v1
         with:
           files: 'src/**/*.css'
           github-token: ${{ secrets.GITHUB_TOKEN }}
@@ -62,7 +62,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: your-username/bd-class-check@v1
+      - uses: Kamiikaze/bd-class-check@v1
         with:
           files: ${{ github.event.inputs.files || 'src/**/*.css,styles/**/*.css' }}
           changes-url: 'https://raw.githubusercontent.com/SyndiShanX/Update-Classes/refs/heads/main/Changes.txt'
