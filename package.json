@@ -1,0 +1,20 @@
+{
+  "name": "bd-class-check",
+  "version": "0.0.1",
+  "description": "GitHub Action to update CSS class names based on BetterDiscord changes",
+  "keywords": [
+    "github-action",
+    "css",
+    "betterdiscord",
+    "discord",
+    "class-names"
+  ],
+  "author": {
+    "name": "Kamikaze",
+    "url": "https://github.com/Kamiikaze"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "glob": "13.0.0"
+  }
+}

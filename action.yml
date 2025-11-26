@@ -1,0 +1,314 @@
+name: 'BD Class Check'
+description: 'Updates CSS class names based on BetterDiscord changes list and creates a PR'
+author: 'Your Name'
+
+branding:
+  icon: 'refresh-cw'
+  color: 'blue'
+
+inputs:
+  files:
+    description: 'Comma-separated list of file paths or glob patterns (e.g., "src/**/*.css,styles/*.css")'
+    required: true
+    default: 'src/**/*.css'
+  
+  changes-url:
+    description: 'URL to the Changes.txt file'
+    required: false
+    default: 'https://raw.githubusercontent.com/SyndiShanX/Update-Classes/refs/heads/main/Changes.txt'
+  
+  github-token:
+    description: 'GitHub token for creating PRs'
+    required: true
+    default: ${{ github.token }}
+  
+  branch-name:
+    description: 'Branch name for the PR'
+    required: false
+    default: 'css-class-updates'
+  
+  commit-message:
+    description: 'Commit message template'
+    required: false
+    default: 'chore: update CSS classes'
+  
+  pr-title:
+    description: 'Pull request title'
+    required: false
+    default: 'chore: Update CSS classes from upstream changes'
+  
+  pr-labels:
+    description: 'Comma-separated list of labels for the PR'
+    required: false
+    default: 'dependencies,automated'
+
+outputs:
+  has-changes:
+    description: 'Whether any changes were made'
+    value: ${{ steps.update.outputs.has_changes }}
+  
+  total-changes:
+    description: 'Total number of class changes made'
+    value: ${{ steps.summary.outputs.total_changes }}
+  
+  modified-files:
+    description: 'Number of files modified'
+    value: ${{ steps.summary.outputs.modified_files }}
+  
+  pr-number:
+    description: 'Pull request number (if created)'
+    value: ${{ steps.create-pr.outputs.pull-request-number }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    
+    - name: Get Changes.txt commit date
+      id: changes_date
+      shell: bash
+      run: |
+        CHANGES_URL="${{ inputs.changes-url }}"
+        
+        # Parse GitHub URL to get API endpoint
+        if [[ $CHANGES_URL =~ github\.com/([^/]+)/([^/]+)/.*/(main|master)/Changes\.txt ]]; then
+          OWNER="${BASH_REMATCH[1]}"
+          REPO="${BASH_REMATCH[2]}"
+          BRANCH="${BASH_REMATCH[3]}"
+          
+          # Get the commit date from GitHub API
+          COMMIT_DATE=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/commits?path=Changes.txt&sha=$BRANCH&per_page=1" | jq -r '.[0].commit.committer.date')
+          echo "commit_date=$COMMIT_DATE" >> $GITHUB_OUTPUT
+          echo "Changes.txt last updated: $COMMIT_DATE"
+        else
+          echo "commit_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Create update script
+      shell: bash
+      run: |
+        cat << 'SCRIPT_EOF' > ${{ github.action_path }}/update-classes.js
+        import fs from "node:fs";
+        import path from "node:path";
+        import { glob } from "glob";
+
+        async function main() {
+          const changesUrl = process.env.CHANGES_URL;
+          const filesInput = process.env.FILES_INPUT;
+          
+          console.log(`Fetching changes from: ${changesUrl}`);
+          
+          // Fetch changes list
+          const rawChangesList = await fetch(changesUrl).then((res) => res.text());
+          const changesList = rawChangesList
+            .split("\n")
+            .map((line) => line.trim())
+            .filter((line) => line !== "");
+          
+          console.log(`Found ${changesList.length} change entries`);
+          
+          // Combine changes into pairs
+          const combinedChangesList = changesList.reduce((acc, line, index) => {
+            if (index % 2 === 0 && changesList[index + 1]) {
+              acc.push({ oldClass: line, newClass: changesList[index + 1] });
+            }
+            return acc;
+          }, []);
+          
+          console.log(`Combined into ${combinedChangesList.length} change pairs`);
+          
+          // Filter relevant changes
+          const filteredChangeList = combinedChangesList.filter((line) =>
+            line.oldClass !== line.newClass &&
+            (line.oldClass.includes("_") || line.newClass.includes("_") ||
+              line.oldClass.includes("-") || line.newClass.includes("-"))
+          );
+          
+          console.log(`Filtered to ${filteredChangeList.length} relevant changes`);
+          
+          // Create selector map
+          const selectorMap = new Map(
+            filteredChangeList.map(change => [`.${change.oldClass}`, change])
+          );
+          
+          // Parse files input
+          const patterns = filesInput.split(',').map(p => p.trim());
+          const files = [];
+          
+          for (const pattern of patterns) {
+            if (fs.existsSync(pattern)) {
+              const stat = fs.statSync(pattern);
+              if (stat.isFile()) {
+                files.push(pattern);
+              } else if (stat.isDirectory()) {
+                const matched = await glob(`${pattern}/**/*.css`, { nodir: true });
+                files.push(...matched);
+              }
+            } else {
+              const matched = await glob(pattern, { nodir: true });
+              files.push(...matched);
+            }
+          }
+          
+          console.log(`Found ${files.length} files to check`);
+          
+          const allDiffs = [];
+          const modifiedFiles = new Set();
+          
+          // Process each file
+          for (const filePath of files) {
+            const fileContent = fs.readFileSync(filePath, 'utf8');
+            const fileLines = fileContent.split("\n");
+            const classPattern = /\.[\w-_]+/g;
+            let modified = false;
+            const newLines = [];
+            
+            for (let i = 0; i < fileLines.length; i++) {
+              let line = fileLines[i];
+              const matches = line.match(classPattern);
+              
+              if (matches) {
+                for (const selector of matches) {
+                  const change = selectorMap.get(selector);
+                  if (change) {
+                    const newSelector = `.${change.newClass}`;
+                    line = line.replace(selector, newSelector);
+                    modified = true;
+                    
+                    allDiffs.push({
+                      file: filePath,
+                      line: i + 1,
+                      oldClass: change.oldClass,
+                      newClass: change.newClass,
+                    });
+                  }
+                }
+              }
+              
+              newLines.push(line);
+            }
+            
+            // Write back if modified
+            if (modified) {
+              fs.writeFileSync(filePath, newLines.join("\n"));
+              modifiedFiles.add(filePath);
+              console.log(`Modified: ${filePath}`);
+            }
+          }
+          
+          console.log(`Total changes: ${allDiffs.length}`);
+          console.log(`Modified files: ${modifiedFiles.size}`);
+          
+          // Save summary for PR
+          const summary = {
+            totalChanges: allDiffs.length,
+            modifiedFiles: Array.from(modifiedFiles),
+            changes: allDiffs
+          };
+          
+          fs.writeFileSync('changes-summary.json', JSON.stringify(summary, null, 2));
+          
+          return allDiffs.length > 0;
+        }
+
+        main().then(hasChanges => {
+          process.exit(hasChanges ? 0 : 1);
+        }).catch(err => {
+          console.error('Error:', err);
+          process.exit(1);
+        });
+        SCRIPT_EOF
+    
+    - name: Install dependencies
+      shell: bash
+      working-directory: ${{ github.action_path }}
+      run: |
+        if [ ! -f "package.json" ]; then
+          npm init -y
+          npm install glob
+        fi
+    
+    - name: Run CSS class update script
+      id: update
+      shell: bash
+      working-directory: ${{ github.workspace }}
+      run: |
+        export CHANGES_URL="${{ inputs.changes-url }}"
+        export FILES_INPUT="${{ inputs.files }}"
+        
+        if node ${{ github.action_path }}/update-classes.js; then
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Read summary
+      id: summary
+      if: steps.update.outputs.has_changes == 'true'
+      shell: bash
+      run: |
+        TOTAL=$(jq -r '.totalChanges' changes-summary.json)
+        FILES=$(jq -r '.modifiedFiles | length' changes-summary.json)
+        echo "total_changes=$TOTAL" >> $GITHUB_OUTPUT
+        echo "modified_files=$FILES" >> $GITHUB_OUTPUT
+    
+    - name: Generate PR body
+      if: steps.update.outputs.has_changes == 'true'
+      shell: bash
+      run: |
+        COMMIT_DATE="${{ steps.changes_date.outputs.commit_date }}"
+        
+        cat << 'EOF' > pr-body.md
+        ## CSS Class Updates
+        
+        This PR updates CSS classes based on changes from the upstream Changes.txt file.
+        
+        **Changes.txt last updated:** COMMIT_DATE_PLACEHOLDER
+        
+        ### Summary
+        EOF
+        
+        sed -i "s/COMMIT_DATE_PLACEHOLDER/$COMMIT_DATE/" pr-body.md
+        
+        # Add summary from JSON
+        node -e "
+          const summary = require('./changes-summary.json');
+          console.log(\`\n**Total changes:** \${summary.totalChanges}\`);
+          console.log(\`**Files modified:** \${summary.modifiedFiles.length}\n\`);
+          console.log(\`### Modified Files\n\`);
+          summary.modifiedFiles.forEach(file => console.log(\`- \${file}\`));
+          console.log(\`\n### Changes Detail\n\`);
+          const grouped = {};
+          summary.changes.forEach(change => {
+            if (!grouped[change.file]) grouped[change.file] = [];
+            grouped[change.file].push(change);
+          });
+          Object.entries(grouped).forEach(([file, changes]) => {
+            console.log(\`\n#### \${file}\n\`);
+            changes.slice(0, 50).forEach(change => {
+              console.log(\`- Line \${change.line}: \\\`.\${change.oldClass}\\\` → \\\`.\${change.newClass}\\\`\`);
+            });
+            if (changes.length > 50) {
+              console.log(\`\n_... and \${changes.length - 50} more changes_\`);
+            }
+          });
+        " >> pr-body.md
+    
+    - name: Create Pull Request
+      id: create-pr
+      if: steps.update.outputs.has_changes == 'true'
+      uses: peter-evans/create-pull-request@v6
+      with:
+        token: ${{ inputs.github-token }}
+        commit-message: |
+          ${{ inputs.commit-message }}
+          
+          Changes based on updates from ${{ steps.changes_date.outputs.commit_date }}
+        branch: ${{ inputs.branch-name }}
+        delete-branch: true
+        title: ${{ inputs.pr-title }}
+        body-path: pr-body.md
+        labels: ${{ inputs.pr-labels }}

@@ -1,0 +1,55 @@
+name: Test Action
+
+on:
+  workflow_dispatch:
+    inputs:
+      files:
+        description: 'Files to test'
+        required: false
+        default: 'test/**/*.css'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      
+      - name: Create test file
+        run: |
+          mkdir -p test
+          cat << 'EOF' > test/example.css
+          .chatContent_a7d72e {
+            color: red;
+          }
+          
+          .message_d5deea {
+            padding: 10px;
+          }
+          
+          .content_e62b38 {
+            background: blue;
+          }
+          EOF
+      
+      - name: Run action
+        id: update
+        uses: ./
+        with:
+          files: 'test/**/*.css'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Show results
+        run: |
+          echo "Has changes: ${{ steps.update.outputs.has-changes }}"
+          echo "Total changes: ${{ steps.update.outputs.total-changes }}"
+          echo "Modified files: ${{ steps.update.outputs.modified-files }}"
+          
+          if [ -f changes-summary.json ]; then
+            echo "Changes summary:"
+            cat changes-summary.json
+          fi

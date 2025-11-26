@@ -1,0 +1,6 @@
+node_modules/
+*.log
+changes-summary.json
+pr-body.md
+.DS_Store
+.idea
