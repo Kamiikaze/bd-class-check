@@ -107,31 +107,29 @@ runs:
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
-        
+
         BRANCH="${{ inputs.branch-name }}"
-        
-        # Fetch branch if it exists
+
+        # Fetch and checkout branch if it exists
         if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
-          echo "🔎 Existing branch found — fetching it"
+          echo "🔎 Existing branch found — checking it out"
           git fetch origin "$BRANCH"
-          BASE_REF="origin/$BRANCH"
+          git checkout -B "$BRANCH" "origin/$BRANCH"
         else
-          echo "🆕 No branch found — comparing against main"
-          git fetch origin main
-          BASE_REF="origin/main"
+          echo "🆕 No branch found — staying on current branch"
         fi
-        
+
         echo "🔄 Running CSS class update..."
         node ${{ github.action_path }}/update-classes.js
-        
-        # Now check if anything actually changed
-        echo "📌 Checking if changes differ from $BASE_REF"
-        if git diff --quiet $BASE_REF -- .; then
-          echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "✓ No changes since last PR — skipping"
-        else
+        EXIT_CODE=$?
+
+        # Check if the script made any modifications
+        if [[ $EXIT_CODE -eq 1 ]]; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
           echo "✨ Changes detected"
+        else
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "✓ No changes detected"
         fi
 
     - name: Read summary
