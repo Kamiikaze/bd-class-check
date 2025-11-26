@@ -88,6 +88,18 @@ runs:
         COMMIT_DATE=$(curl -s "https://api.github.com/repos/SyndiShanX/Update-Classes/commits?path=Changes.txt&sha=main&per_page=1" | jq -r '.[0].commit.committer.date')
         echo "commit_date=$COMMIT_DATE" >> $GITHUB_OUTPUT
         echo "Changes.txt last updated: $COMMIT_DATE"
+
+    - name: Check if PR branch exists
+      id: check_branch
+      shell: bash
+      run: |
+        BRANCH="${{ inputs.branch-name }}"
+        if git ls-remote --exit-code --heads origin "$BRANCH" > /dev/null 2>&1; then
+          echo "exists=true" >> $GITHUB_OUTPUT
+        else
+          echo "exists=false" >> $GITHUB_OUTPUT
+        fi
+        
     
     - name: Run CSS class update script
       id: update
@@ -95,18 +107,36 @@ runs:
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
-
+        
+        # If branch exists check diff against that branch
+        if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
+          echo "🔎 Existing branch found — comparing against it"
+          git fetch origin "${{ inputs.branch-name }}"
+          git checkout "${{ inputs.branch-name }}"
+          BASE_REF="${{ inputs.branch-name }}"
+        else
+          echo "🆕 No branch found — comparing against main"
+          git checkout "${{ github.base_ref || 'main' }}"
+          BASE_REF="main"
+        fi
+        
         echo "🔄 Running CSS class update..."
-        echo "Changes URL: $CHANGES_URL"
-        echo "Files pattern: $FILES_INPUT"
-
+        echo "Comparing changes relative to: $BASE_REF"
+        
         if node ${{ github.action_path }}/update-classes.js; then
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "✓ Changes detected and applied"
+          # Detect if any difference REALLY happened
+          if git diff --quiet; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "✓ No additional changes, already up-to-date"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✓ New changes detected"
+          fi
         else
           echo "has_changes=false" >> $GITHUB_OUTPUT
           echo "✓ No changes needed"
         fi
+
     
     - name: Read summary
       id: summary
