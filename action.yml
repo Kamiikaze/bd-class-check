@@ -115,14 +115,18 @@ runs:
           echo "🔎 Existing branch found — checking it out"
           git fetch origin "$BRANCH"
 
-          # Stash any local changes to avoid conflicts
+          # Clean untracked files and stash any tracked changes
           if ! git diff --quiet || ! git diff --cached --quiet; then
-            echo "💾 Stashing local changes"
+            echo "💾 Stashing tracked changes"
             git stash push -m "Auto-stash before branch checkout"
             STASHED=true
           else
             STASHED=false
           fi
+
+          # Remove untracked files that would conflict with checkout
+          echo "🧹 Cleaning untracked files"
+          git clean -fd
 
           git checkout -B "$BRANCH" "origin/$BRANCH"
 
