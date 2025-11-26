@@ -67,31 +67,13 @@ runs:
       with:
         node-version: '20'
     
-    - name: Copy action files to workspace
-      shell: bash
-      run: |
-        echo "📦 Preparing action files..."
-        
-        # Check if we're running in the action's own repository
-        if [ "${{ github.action_path }}" != "." ] && [ "${{ github.action_path }}" != "$PWD" ]; then
-          echo "Copying files from action to workspace..."
-          cp ${{ github.action_path }}/package.json .
-          cp ${{ github.action_path }}/update-classes.js .
-          if [ -f "${{ github.action_path }}/package-lock.json" ]; then
-            cp ${{ github.action_path }}/package-lock.json .
-          fi
-          echo "✓ Files copied"
-        else
-          echo "✓ Running in action repository, files already present"
-        fi
-    
     - name: Install dependencies
       shell: bash
       run: |
         echo "📦 Installing dependencies..."
         
         if [ ! -d "node_modules" ] || [ ! -f "node_modules/glob/package.json" ]; then
-          npm install
+          npm ci
           echo "✓ Dependencies installed"
         else
           echo "✓ Dependencies already present"
