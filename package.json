@@ -1,7 +1,9 @@
 {
   "name": "bd-class-check",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "description": "GitHub Action to update CSS class names based on BetterDiscord changes",
+  "type": "module",
+  "main": "update-classes.js",
   "keywords": [
     "github-action",
     "css",
@@ -15,6 +17,6 @@
   },
   "license": "MIT",
   "dependencies": {
-    "glob": "13.0.0"
+    "glob": "^11.0.0"
   }
 }

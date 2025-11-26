@@ -67,6 +67,24 @@ runs:
       with:
         node-version: '20'
     
+    - name: Copy action files to workspace
+      shell: bash
+      run: |
+        echo "📦 Copying action files..."
+        cp ${{ github.action_path }}/package.json .
+        cp ${{ github.action_path }}/update-classes.js .
+        if [ -f "${{ github.action_path }}/package-lock.json" ]; then
+          cp ${{ github.action_path }}/package-lock.json .
+        fi
+        echo "✓ Files copied"
+    
+    - name: Install dependencies
+      shell: bash
+      run: |
+        echo "📦 Installing dependencies..."
+        npm install
+        echo "✓ Dependencies installed"
+    
     - name: Get Changes.txt commit date
       id: changes_date
       shell: bash
@@ -87,29 +105,14 @@ runs:
           echo "commit_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
         fi
     
-
-    
-    - name: Install dependencies
-      shell: bash
-      run: |
-        # Copy package files from action to workspace
-        cp ${{ github.action_path }}/package.json .
-        if [ -f "${{ github.action_path }}/package-lock.json" ]; then
-          cp ${{ github.action_path }}/package-lock.json .
-        fi
-        npm install
-    
     - name: Run CSS class update script
       id: update
       shell: bash
       run: |
-        # Copy script from action to workspace
-        cp ${{ github.action_path }}/update-classes.js .
-        
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
         
-        echo "Running CSS class update..."
+        echo "🔄 Running CSS class update..."
         echo "Changes URL: $CHANGES_URL"
         echo "Files pattern: $FILES_INPUT"
         
