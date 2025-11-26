@@ -91,25 +91,34 @@ runs:
     
     - name: Install dependencies
       shell: bash
-      working-directory: ${{ github.action_path }}
       run: |
-        if [ ! -f "package.json" ]; then
-          npm init -y
-          npm install glob
+        # Copy package files from action to workspace
+        cp ${{ github.action_path }}/package.json .
+        if [ -f "${{ github.action_path }}/package-lock.json" ]; then
+          cp ${{ github.action_path }}/package-lock.json .
         fi
+        npm install
     
     - name: Run CSS class update script
       id: update
       shell: bash
-      working-directory: ${{ github.workspace }}
       run: |
+        # Copy script from action to workspace
+        cp ${{ github.action_path }}/update-classes.js .
+        
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
         
-        if node ${{ github.action_path }}/update-classes.js; then
+        echo "Running CSS class update..."
+        echo "Changes URL: $CHANGES_URL"
+        echo "Files pattern: $FILES_INPUT"
+        
+        if node update-classes.js; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "✓ Changes detected and applied"
         else
           echo "has_changes=false" >> $GITHUB_OUTPUT
+          echo "✓ No changes needed"
         fi
     
     - name: Read summary
