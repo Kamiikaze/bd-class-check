@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
+        with:
+          persist-credentials: false
       
       - name: Create test file
         run: |
@@ -48,6 +50,7 @@ jobs:
           echo "Has changes: ${{ steps.update.outputs.has-changes }}"
           echo "Total changes: ${{ steps.update.outputs.total-changes }}"
           echo "Modified files: ${{ steps.update.outputs.modified-files }}"
+          echo "PR number: ${{ steps.update.outputs.pr-number }}"
           
           if [ -f changes-summary.json ]; then
             echo "Changes summary:"

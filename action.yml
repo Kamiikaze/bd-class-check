@@ -20,7 +20,6 @@ inputs:
   github-token:
     description: 'GitHub token for creating PRs'
     required: true
-    default: ${{ github.token }}
   
   branch-name:
     description: 'Branch name for the PR'
@@ -105,12 +104,12 @@ runs:
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
-        
+
         echo "🔄 Running CSS class update..."
         echo "Changes URL: $CHANGES_URL"
         echo "Files pattern: $FILES_INPUT"
-        
-        if node update-classes.js; then
+
+        if node ${{ github.action_path }}/update-classes.js; then
           echo "has_changes=true" >> $GITHUB_OUTPUT
           echo "✓ Changes detected and applied"
         else
