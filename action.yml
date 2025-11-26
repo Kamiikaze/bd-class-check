@@ -109,35 +109,6 @@ runs:
 
         BRANCH="${{ inputs.branch-name }}"
 
-        # Fetch and checkout branch if it exists
-        if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
-          echo "🔎 Existing branch found — checking it out"
-          git fetch origin "$BRANCH"
-
-          # Clean untracked files and stash any tracked changes
-          if ! git diff --quiet || ! git diff --cached --quiet; then
-            echo "💾 Stashing tracked changes"
-            git stash push -m "Auto-stash before branch checkout"
-            STASHED=true
-          else
-            STASHED=false
-          fi
-
-          # Remove untracked files that would conflict with checkout
-          echo "🧹 Cleaning untracked files"
-          git clean -fd
-
-          git checkout -B "$BRANCH" "origin/$BRANCH"
-
-          # Restore stashed changes if any
-          if [[ "$STASHED" == "true" ]]; then
-            echo "📥 Restoring stashed changes"
-            git stash pop || true
-          fi
-        else
-          echo "🆕 No branch found — staying on current branch"
-        fi
-
         echo "🔄 Running CSS class update..."
         set +e  # Don't exit on error
         node ${{ github.action_path }}/update-classes.js
@@ -145,12 +116,29 @@ runs:
         set -e  # Re-enable exit on error
 
         # Check if the script made any modifications
-        if [[ $EXIT_CODE -eq 1 ]]; then
-          echo "has_changes=true" >> $GITHUB_OUTPUT
-          echo "✨ Changes detected"
-        else
+        if [[ $EXIT_CODE -eq 0 ]]; then
           echo "has_changes=false" >> $GITHUB_OUTPUT
-          echo "✓ No changes detected"
+          echo "✓ No changes detected by script"
+          exit 0
+        fi
+
+        echo "✨ Script detected changes"
+
+        # If PR branch exists, check if changes differ from it
+        if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
+          echo "📌 PR branch exists - checking if changes differ from it"
+          git fetch origin "$BRANCH"
+
+          if git diff --quiet "origin/$BRANCH" -- .; then
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+            echo "✓ No new changes compared to existing PR branch"
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "✨ New changes detected compared to PR branch"
+          fi
+        else
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+          echo "✨ New PR will be created"
         fi
 
     - name: Read summary
