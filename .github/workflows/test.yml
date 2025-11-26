@@ -45,6 +45,10 @@ jobs:
             background: blue;
           }
           
+          .unread_c10249 {
+            background: blue;
+          }
+          
           EOF
       
       - name: Run action
