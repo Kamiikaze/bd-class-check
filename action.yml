@@ -114,7 +114,23 @@ runs:
         if [[ "${{ steps.check_branch.outputs.exists }}" == "true" ]]; then
           echo "🔎 Existing branch found — checking it out"
           git fetch origin "$BRANCH"
+
+          # Stash any local changes to avoid conflicts
+          if ! git diff --quiet || ! git diff --cached --quiet; then
+            echo "💾 Stashing local changes"
+            git stash push -m "Auto-stash before branch checkout"
+            STASHED=true
+          else
+            STASHED=false
+          fi
+
           git checkout -B "$BRANCH" "origin/$BRANCH"
+
+          # Restore stashed changes if any
+          if [[ "$STASHED" == "true" ]]; then
+            echo "📥 Restoring stashed changes"
+            git stash pop || true
+          fi
         else
           echo "🆕 No branch found — staying on current branch"
         fi
