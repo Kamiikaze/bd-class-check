@@ -103,6 +103,7 @@ runs:
     - name: Run CSS class update script
       id: update
       shell: bash
+      continue-on-error: true
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
