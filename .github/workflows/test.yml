@@ -49,6 +49,10 @@ jobs:
             background: blue;
           }
           
+          .overflow_cfdc9f {
+            background: blue;
+          }
+          
           EOF
       
       - name: Run action
