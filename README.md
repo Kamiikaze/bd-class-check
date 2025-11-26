@@ -14,7 +14,7 @@ A GitHub Action that automatically updates CSS class names based on BetterDiscor
 ## Usage
 
 ### Basic Example
-
+[SyndiShanX/Update-Classes](https://github.com/SyndiShanX/Update-Classes)
 ```yaml
 name: Update CSS Classes
 

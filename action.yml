@@ -84,19 +84,10 @@ runs:
       run: |
         CHANGES_URL="${{ inputs.changes-url }}"
         
-        # Parse GitHub URL to get API endpoint
-        if [[ $CHANGES_URL =~ github\.com/([^/]+)/([^/]+)/.*/(main|master)/Changes\.txt ]]; then
-          OWNER="${BASH_REMATCH[1]}"
-          REPO="${BASH_REMATCH[2]}"
-          BRANCH="${BASH_REMATCH[3]}"
-          
-          # Get the commit date from GitHub API
-          COMMIT_DATE=$(curl -s "https://api.github.com/repos/$OWNER/$REPO/commits?path=Changes.txt&sha=$BRANCH&per_page=1" | jq -r '.[0].commit.committer.date')
-          echo "commit_date=$COMMIT_DATE" >> $GITHUB_OUTPUT
-          echo "Changes.txt last updated: $COMMIT_DATE"
-        else
-          echo "commit_date=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> $GITHUB_OUTPUT
-        fi
+        # Get the commit date from GitHub API
+        COMMIT_DATE=$(curl -s "https://api.github.com/repos/SyndiShanX/Update-Classes/commits?path=Changes.txt&sha=main&per_page=1" | jq -r '.[0].commit.committer.date')
+        echo "commit_date=$COMMIT_DATE" >> $GITHUB_OUTPUT
+        echo "Changes.txt last updated: $COMMIT_DATE"
     
     - name: Run CSS class update script
       id: update
@@ -136,7 +127,7 @@ runs:
         cat << 'EOF' > pr-body.md
         ## CSS Class Updates
         
-        This PR updates CSS classes based on changes from the upstream Changes.txt file.
+        This PR updates CSS classes based on changes from the upstream [SyndiShanX/Update-Classes](https://github.com/SyndiShanX/Update-Classes) `Changes.txt` file.
         
         **Changes.txt last updated:** COMMIT_DATE_PLACEHOLDER
         
