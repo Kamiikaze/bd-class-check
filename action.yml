@@ -103,7 +103,6 @@ runs:
     - name: Run CSS class update script
       id: update
       shell: bash
-      continue-on-error: true
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
@@ -140,8 +139,10 @@ runs:
         fi
 
         echo "🔄 Running CSS class update..."
+        set +e  # Don't exit on error
         node ${{ github.action_path }}/update-classes.js
         EXIT_CODE=$?
+        set -e  # Re-enable exit on error
 
         # Check if the script made any modifications
         if [[ $EXIT_CODE -eq 1 ]]; then
