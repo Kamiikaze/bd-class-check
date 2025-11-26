@@ -53,6 +53,10 @@ jobs:
             background: blue;
           }
           
+          .subtext_e06aad {
+            background: blue;
+          }
+          
           EOF
       
       - name: Run action
