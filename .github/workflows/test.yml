@@ -41,6 +41,10 @@ jobs:
             background: blue;
           }
           
+          .uppercase_d0da3e {
+            background: blue;
+          }
+          
           EOF
       
       - name: Run action
