@@ -39,7 +39,7 @@ inputs:
   pr-labels:
     description: 'Comma-separated list of labels for the PR'
     required: false
-    default: 'dependencies,automated'
+    default: 'bd-class-check,automated'
 
 outputs:
   has-changes:

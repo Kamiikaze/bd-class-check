@@ -36,6 +36,11 @@ jobs:
           .content_e62b38 {
             background: blue;
           }
+          
+          .icon_e62b38 {
+            background: blue;
+          }
+          
           EOF
       
       - name: Run action
