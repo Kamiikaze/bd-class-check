@@ -11,31 +11,31 @@ inputs:
     description: 'Comma-separated list of file paths or glob patterns (e.g., "src/**/*.css,styles/*.css")'
     required: true
     default: 'src/**/*.css'
-  
+
   changes-url:
     description: 'URL to the Changes.txt file'
     required: false
     default: 'https://raw.githubusercontent.com/SyndiShanX/Update-Classes/refs/heads/main/Changes.txt'
-  
+
   github-token:
     description: 'GitHub token for creating PRs'
     required: true
-  
+
   branch-name:
     description: 'Branch name for the PR'
     required: false
     default: 'css-class-updates'
-  
+
   commit-message:
     description: 'Commit message template'
     required: false
     default: 'chore: update CSS classes'
-  
+
   pr-title:
     description: 'Pull request title'
     required: false
     default: 'chore: Update CSS classes from upstream changes'
-  
+
   pr-labels:
     description: 'Comma-separated list of labels for the PR'
     required: false
@@ -45,15 +45,15 @@ outputs:
   has-changes:
     description: 'Whether any changes were made'
     value: ${{ steps.update.outputs.has_changes }}
-  
+
   total-changes:
     description: 'Total number of class changes made'
     value: ${{ steps.summary.outputs.total_changes }}
-  
+
   modified-files:
     description: 'Number of files modified'
     value: ${{ steps.summary.outputs.modified_files }}
-  
+
   pr-number:
     description: 'Pull request number (if created)'
     value: ${{ steps.create-pr.outputs.pull-request-number }}
@@ -62,22 +62,17 @@ runs:
   using: 'composite'
   steps:
     - name: Setup Node.js
-      uses: actions/setup-node@v4
+      uses: actions/setup-node@v6
       with:
-        node-version: '20'
-    
+        node-version: '22'
+
     - name: Install dependencies
       shell: bash
       run: |
         echo "📦 Installing dependencies..."
-        
-        if [ ! -d "node_modules" ] || [ ! -f "node_modules/glob/package.json" ]; then
-          npm ci
-          echo "✓ Dependencies installed"
-        else
-          echo "✓ Dependencies already present"
-        fi
-    
+        npm ci
+        echo "✓ Dependencies installed"
+
     - name: Get Changes.txt commit date
       id: changes_date
       shell: bash
@@ -150,7 +145,7 @@ runs:
         FILES=$(jq -r '.modifiedFiles | length' changes-summary.json)
         echo "total_changes=$TOTAL" >> $GITHUB_OUTPUT
         echo "modified_files=$FILES" >> $GITHUB_OUTPUT
-    
+
     - name: Generate PR body
       if: steps.update.outputs.has_changes == 'true'
       shell: bash
@@ -192,11 +187,11 @@ runs:
             }
           });
         " >> pr-body.md
-    
+
     - name: Create Pull Request
       id: create-pr
       if: steps.update.outputs.has_changes == 'true'
-      uses: peter-evans/create-pull-request@v6
+      uses: peter-evans/create-pull-request@v7
       with:
         token: ${{ inputs.github-token }}
         commit-message: |
