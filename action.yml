@@ -13,9 +13,9 @@ inputs:
     default: 'src/**/*.css'
 
   changes-url:
-    description: 'URL to the Changes.txt file'
+    description: 'Github API - File URL to the Changes.txt file'
     required: false
-    default: 'https://raw.githubusercontent.com/SyndiShanX/Update-Classes/refs/heads/main/Changes.txt'
+    default: 'https://api.github.com/repos/SyndiShanX/Update-Classes/contents/Changes.txt'
 
   github-token:
     description: 'GitHub token for creating PRs'

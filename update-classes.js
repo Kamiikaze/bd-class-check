@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import {glob} from "glob";
+import { glob } from "glob";
 
 async function main() {
   const changesUrl = process.env.CHANGES_URL;
@@ -8,7 +8,16 @@ async function main() {
   console.log(`Fetching changes from: ${changesUrl}`);
 
   // Fetch changes list
-  const rawChangesList = await fetch(changesUrl).then((res) => res.text());
+  const rawChangesList = await fetch(
+    changesUrl,
+    {
+      headers: {
+        Accept: "application/vnd.github.raw+json",
+        "User-Agent": "bd-class-check",
+      },
+    },
+  ).then((res) => res.text());
+
   const changesList = rawChangesList
     .split("\n")
     .map((line) => line.trim())
@@ -47,9 +56,7 @@ async function main() {
   const patterns = filesInput.split(",").map((p) => p.trim());
 
   const files = (
-      await Promise.all(
-          patterns.map((pattern) => glob(pattern, { nodir: true })),
-      )
+    await Promise.all(patterns.map((pattern) => glob(pattern, { nodir: true })))
   ).flat();
 
   console.log(`Found ${files.length} files to check`);
