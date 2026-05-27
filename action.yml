@@ -68,6 +68,7 @@ runs:
 
     - name: Install dependencies
       shell: bash
+      working-directory: ${{ github.action_path }}
       run: |
         echo "📦 Installing dependencies..."
         npm ci
@@ -98,6 +99,7 @@ runs:
     - name: Run CSS class update script
       id: update
       shell: bash
+      working-directory: ${{ github.action_path }}
       run: |
         export CHANGES_URL="${{ inputs.changes-url }}"
         export FILES_INPUT="${{ inputs.files }}"
