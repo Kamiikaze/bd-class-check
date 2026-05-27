@@ -45,22 +45,12 @@ async function main() {
 
   // Parse files input
   const patterns = filesInput.split(",").map((p) => p.trim());
-  const files = [];
 
-  for (const pattern of patterns) {
-    if (fs.existsSync(pattern)) {
-      const stat = fs.statSync(pattern);
-      if (stat.isFile()) {
-        files.push(pattern);
-      } else if (stat.isDirectory()) {
-        const matched = await glob(`${pattern}/**/*.css`, { nodir: true });
-        files.push(...matched);
-      }
-    } else {
-      const matched = await glob(pattern, { nodir: true });
-      files.push(...matched);
-    }
-  }
+  const files = (
+      await Promise.all(
+          patterns.map((pattern) => glob(pattern, { nodir: true })),
+      )
+  ).flat();
 
   console.log(`Found ${files.length} files to check`);
 
